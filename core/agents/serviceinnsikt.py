@@ -95,6 +95,8 @@ class ServiceinnsiktAgent(BaseAgent):
             for uid, count in utstyr_teller.most_common(10)
         ]
 
+        forvarslende_monster = self.identifiser_forvarslende_monster(poster)
+
         return {
             "totalt_antall_ordre": len(poster),
             "antall_forsinkede": len(forsinkede),
@@ -103,7 +105,62 @@ class ServiceinnsiktAgent(BaseAgent):
             "total_nedetid_timer": total_nedetid,
             "nedetid_per_maned": dict(sorted(nedetid_per_maned.items())),
             "gjentakende_feil": gjentakende_feil,
+            "forvarslende_monster": forvarslende_monster,
         }
+
+    @staticmethod
+    def identifiser_forvarslende_monster(ordrer: list[dict]) -> list[dict]:
+        """
+        Detect escalating fault frequency per equipment.
+        Splits each equipment's orders by time (first half vs second half of its date range).
+        Flags equipment where second half has >=50% more orders than first half.
+        Returns list sorted by escalation ratio descending.
+        Returns recommendation only — human-in-the-loop, never automatic action.
+        """
+        from datetime import datetime
+
+        def parse_dato(verdi):
+            if verdi is None:
+                return None
+            if isinstance(verdi, date):
+                return verdi
+            try:
+                return datetime.strptime(str(verdi), "%Y-%m-%d").date()
+            except ValueError:
+                return None
+
+        utstyr_ordrer: dict[str, list[date]] = defaultdict(list)
+        for ordre in ordrer:
+            d = parse_dato(ordre.get("opprettet"))
+            if d:
+                utstyr_ordrer[ordre.get("utstyr_id", "ukjent")].append(d)
+
+        forvarsel = []
+        for utstyr_id, datoer in utstyr_ordrer.items():
+            if len(datoer) < 4:
+                continue
+            datoer_sortert = sorted(datoer)
+            tidlig = datoer_sortert[0]
+            sent = datoer_sortert[-1]
+            midtpunkt = tidlig + (sent - tidlig) / 2
+            forste_halvdel = sum(1 for d in datoer_sortert if d <= midtpunkt)
+            andre_halvdel = sum(1 for d in datoer_sortert if d > midtpunkt)
+
+            if forste_halvdel == 0:
+                continue
+            ratio = andre_halvdel / forste_halvdel
+            if ratio >= 1.5:
+                forvarsel.append({
+                    "utstyr_id": utstyr_id,
+                    "totalt_antall_ordre": len(datoer),
+                    "antall_ordre_forste_halvdel": forste_halvdel,
+                    "antall_ordre_andre_halvdel": andre_halvdel,
+                    "eskalering_ratio": round(ratio, 2),
+                    "anbefaling": "Feilfrekvens eskalerende — vurder forebyggende vedlikehold eller grundig tilstandsanalyse",
+                })
+
+        forvarsel.sort(key=lambda e: e["eskalering_ratio"], reverse=True)
+        return forvarsel
 
     def besvar_sporsmal(self, sporsmal: str, analyse: dict) -> str:
         """Send question + context to Claude API, return answer."""

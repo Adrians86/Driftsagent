@@ -30,3 +30,15 @@
   betingelse: "antall_gjentakelser > 3"
   konsekvens: VARSEL_GJENTAKENDE_FEIL
   beskrivelse: "Samme feil på samme utstyr mer enn 3 ganger"
+
+- id: RISIKO_DODT_LAGER
+  modul: lagerinnsikt
+  betingelse: "nedgang_prosent >= 50"
+  konsekvens: ANBEFAL_LAGERJUSTERING
+  beskrivelse: "Forbruk falt med ≥50 % — post beveger seg mot dødt lager"
+
+- id: ESKALERENDE_FEILFREKVENS
+  modul: serviceinnsikt
+  betingelse: "eskalering_ratio >= 1.5"
+  konsekvens: ANBEFAL_FOREBYGGENDE_VEDLIKEHOLD
+  beskrivelse: "Antall serviceordrer i siste halvdel er ≥50 % høyere enn første halvdel"
