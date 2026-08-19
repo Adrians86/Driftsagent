@@ -1,0 +1,32 @@
+# KPI thresholds — never hardcoded in Python
+# All modules read from this file at startup via core/rules/loader.py
+
+- id: DODT_LAGER
+  modul: lagerinnsikt
+  betingelse: "dager_siden_siste_bevegelse >= 365"
+  konsekvens: MARKER_SOM_DODT_LAGER
+  beskrivelse: "Ingen bevegelse siste 12 måneder"
+
+- id: LAV_LAGERBEHOLDNING
+  modul: lagerinnsikt
+  betingelse: "antall < min_niva"
+  konsekvens: VARSEL_BESTILL
+  beskrivelse: "Under minimumsnivå — bestilling anbefales"
+
+- id: OVERLAGER
+  modul: lagerinnsikt
+  betingelse: "antall > maks_niva * 1.5"
+  konsekvens: VARSEL_OVERLAGER
+  beskrivelse: "Vesentlig over maksnivå — bundet kapital"
+
+- id: FORSINKET_ORDRE
+  modul: serviceinnsikt
+  betingelse: "dager_siden_opprettet > 7 and status != FERDIG"
+  konsekvens: VARSEL_FORSINKELSE
+  beskrivelse: "Serviceordre åpen i mer enn 7 dager uten å være ferdig"
+
+- id: GJENTAKENDE_FEIL
+  modul: serviceinnsikt
+  betingelse: "antall_gjentakelser > 3"
+  konsekvens: VARSEL_GJENTAKENDE_FEIL
+  beskrivelse: "Samme feil på samme utstyr mer enn 3 ganger"
