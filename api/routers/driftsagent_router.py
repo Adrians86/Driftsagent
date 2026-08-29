@@ -7,9 +7,6 @@ from pydantic import BaseModel
 from sqlmodel import Session
 
 from api.database import get_session
-from api.routers.lager import hent_analyse as hent_lager_analyse
-from api.routers.service import hent_analyse as hent_service_analyse
-from core.agents.driftsagent import besvar_tverrfaglig_sporsmal
 from core.models.firma import Firma
 
 router = APIRouter(prefix="/firma/{firma_id}/driftsagent", tags=["driftsagent"])
@@ -26,33 +23,11 @@ def still_tverrfaglig_sporsmal(
     req: TverrfagligSporsmalRequest,
     session: Session = Depends(get_session),
 ) -> dict:
+    """AI Q&A — disabled in public demo; requires authentication (Phase 2)."""
     firma = session.get(Firma, firma_id)
     if not firma:
         raise HTTPException(status_code=404, detail="Firma ikke funnet")
-
-    lager_analyse = None
-    service_analyse = None
-
-    if "lagerinnsikt" in req.moduler:
-        res = hent_lager_analyse(firma_id=firma_id, session=session)
-        if "melding" not in res or len(res) > 1:
-            lager_analyse = res
-
-    if "serviceinnsikt" in req.moduler:
-        res = hent_service_analyse(firma_id=firma_id, session=session)
-        if "melding" not in res or len(res) > 1:
-            service_analyse = res
-
-    if not lager_analyse and not service_analyse:
-        raise HTTPException(
-            status_code=422,
-            detail="Ingen moduldata tilgjengelig. Last opp lager- og/eller servicedata først.",
-        )
-
-    return besvar_tverrfaglig_sporsmal(
-        sporsmal=req.sporsmal,
-        firma_id=firma_id,
-        lager_analyse=lager_analyse,
-        service_analyse=service_analyse,
-        session=session,
+    raise HTTPException(
+        status_code=403,
+        detail="Denne funksjonen krever pålogging — kontakt oss for tilgang.",
     )

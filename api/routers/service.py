@@ -17,7 +17,6 @@ from core.agents.serviceinnsikt import serviceinnsikt_agent
 from core.connectors.column_mapper import normalize_service_data
 from core.connectors.excel_parser import parse_excel_upload
 from core.connectors.normalizer import normalize_record
-from core.models.audit import DriftsagentSporsmal
 from core.models.firma import Firma
 from core.models.service import ServiceOrdre
 
@@ -106,20 +105,9 @@ def still_sporsmal(
     req: SporsmalRequest,
     session: Session = Depends(get_session),
 ) -> dict:
+    """AI Q&A — disabled in public demo; requires authentication (Phase 2)."""
     _require_firma(firma_id, session)
-    analyse = hent_analyse(firma_id=firma_id, session=session)
-    if "melding" in analyse and len(analyse) == 1:
-        raise HTTPException(status_code=422, detail="Ingen servicedata å svare på. Last opp data først.")
-
-    svar = serviceinnsikt_agent.besvar_sporsmal(req.sporsmal, analyse)
-
-    logg = DriftsagentSporsmal(
-        firma_id=firma_id,
-        sporsmal=req.sporsmal,
-        involverte_moduler=["serviceinnsikt"],
-        svar=svar,
+    raise HTTPException(
+        status_code=403,
+        detail="Denne funksjonen krever pålogging — kontakt oss for tilgang.",
     )
-    session.add(logg)
-    session.commit()
-
-    return {"sporsmal": req.sporsmal, "svar": svar}
